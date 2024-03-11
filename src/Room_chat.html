@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <style>
+        body {
+            padding: 0;
+            font-size: 17px;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #messages>li {
+            padding: 0.5rem 1rem;
+            height: 30px;
+            margin: 0px 8px 2px 0px;
+        }
+
+        #messages>li:nth-child(odd) {
+            background: #efefef;
+        }
+
+        #dot {
+            height: 7px;
+            width: 7px;
+            background-color: #bbb;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0px 8px 2px 0px;
+            background-color: blue;
+        }
+
+        #dotOut {
+            height: 7px;
+            width: 7px;
+            background-color: #bbb;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0px 8px 2px 0px;
+            background-color: rgb(255, 0, 0);
+        }
+
+        header {
+            background-color: #bbb;
+            width: 100%;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        #form {
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.25rem;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            height: 3rem;
+            box-sizing: border-box;
+            backdrop-filter: blur(10px);
+        }
+
+        #input {
+            border: none;
+            padding: 0 1rem;
+            flex-grow: 1;
+            border-radius: 2rem;
+            margin: 0.25rem;
+        }
+
+        #input:focus {
+            outline: none;
+        }
+
+        #form>button {
+            background: #333;
+            border: none;
+            padding: 0 1rem;
+            margin: 0.25rem;
+            border-radius: 3px;
+            outline: none;
+            color: #fff;
+        }
+
+        #roomJoin {
+            margin-left: 5px;
+        }
+
+        #roomInput {
+            width: 90px;
+        }
+
+        #newUser {
+            display: flex;
+            align-items: center;
+
+        }
+
+        #quitButton {
+            background-color: red;
+            width: 70px;
+            height: 30px;
+            border-radius: 10px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <header>Room :
+        <input type="text" id="roomInput" />
+        <p id="inName">name : </p>
+        <input type="text " id="nameUser">
+        <button id="joinButton">Join Room</button>
+        <button id="quitButton">Quit</button>
+    </header>
+    <ul id="messages">
+
+    </ul>
+    <form id="form" action="">
+        <input id="input" autocomplete="off" /><button id="Send">Send</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const checkRoom = false;
+        const socket = io('/chat');
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const sentButton = document.getElementById('sent');
+        const messages = document.getElementById('messages');
+        const name = document.getElementById('nameUser');
+        const roomInput = document.getElementById('roomInput');
+        const joinButton = document.getElementById('joinButton');
+        let quitButton = '';
+        let nameU = "";
+        joinButton.addEventListener('click', function () {
+            const room = roomInput.value;
+            nameU = name.value
+            const date = new Date();
+            const newId = date.getTime()
+            console.log(room + " " + nameU)
+            if (room) {
+                socket.emit('join', room, nameU, newId);
+                roomInput.disable = true
+                joinButton.disable = true
+
+                socket.on('success_room', (result) => {
+                    const text = `<li id="newUser"><span id="dot"></span>${result}</li>`
+                    $("#messages").append(text);
+                    roomInput.style.display = 'none';
+                    joinButton.style.display = 'none';
+                    name.style.display = 'none';
+
+                    document.getElementById('inName').style.display = 'none';
+                    $("header").empty();
+                    $("header").append("<p></p>");
+                    $("header").append("Room: " + room);
+                    const quit = `<button id="quitButton">Quit</button>`
+                    $("header").append(quit);
+                    $("header").css("justify-content", "space-around");
+                    document.getElementById('quitButton').style.display = 'block';
+                    quitButton = document.getElementById('quitButton')
+                    document.getElementById('quitButton').addEventListener("click", () => {
+                        socket.emit('quit',nameU,room);
+                        alert('You leaved the room')
+                        location.reload();
+                    });
+                    console.log(quitButton)
+
+                })
+            }
+        })
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (input.value) {
+                const message = input.value;
+                const room = roomInput.value;
+                socket.emit('chat message', { message, room, nameU });
+                input.value = '';
+
+            }
+        });
+
+        socket.on('chat message', (name, letter) => {
+            const item = document.createElement('li');
+            const text = `${name} : ${letter}`
+            item.textContent = text;
+            messages.appendChild(item);
+        });
+
+
+
+
+        socket.on('someoneQuit', (uQuit) => {
+            const text = `<li id="newUser"><span id="dotOut"></span>${uQuit}</li>`
+            $("#messages").append(text);
+        })
+
+    </script>
+</body>
+
+</html>
